@@ -1,0 +1,101 @@
+---
+- name: Configure the proxyarp on vlan1 interface
+  yamaha_network.rtx.rtx_config:
+    lines: ip vlan1 proxyarp on
+    save_when: changed
+
+- name: Output DDNS setting status
+  yamaha_network.rtx.rtx_command:
+    commands: netvolante-dns get hostname list pp 1
+  register: output
+
+- name: Extract the line containing the router hostname from the list of the netvolante service
+  set_fact:
+    result: "{{ output.stdout_lines[0] | select('regex', hostname) | length }}"
+
+- name: Configure DDNS settings (netvolante-dns)
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - netvolante-dns hostname host pp {{ hostname }}
+      - netvolante-dns go pp 1
+    save_when: changed
+  when:
+    - result == "0"
+
+- name: Configure the pp1 interface
+  yamaha_network.rtx.rtx_config:
+    lines: netvolante-dns hostname host pp server=1 {{ hostname }}.aa0.netvolante.jp
+    parents:
+      - pp select 1
+    save_when: changed
+
+- name: Configure the common settings for the pp anonymous interface
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - pp bind tunnel1
+      - pp auth request chap
+      - ppp ipcp ipaddress on
+      - ppp ipcp msext on
+      - ip pp remote address pool {{ address['from'] }}-{{ address['to'] }}
+      - pp enable anonymous
+    parents:
+      - pp select anonymous
+    save_when: changed
+
+- name: Configure users for the VPN connection
+  yamaha_network.rtx.rtx_config:
+    lines: pp auth username {{ item['name'] }} {{ item['password'] }}
+    parents:
+      - pp select anonymous
+    save_when: changed
+  with_items: "{{ users }}"
+
+- name: Configure the tunnel1 interface
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - tunnel encapsulation l2tp
+      - l2tp tunnel disconnect time off
+      - l2tp keepalive use on 10 3
+      - l2tp keepalive log on
+      - l2tp syslog on
+      - ip tunnel tcp mss limit auto
+      - tunnel enable 1
+    parents:
+      - tunnel select 1
+    save_when: changed
+
+- name: Add-on ipsec settings to the tunnel 1 interface
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - ipsec sa policy 101 1 esp aes256-cbc sha256-hmac
+      - ipsec ike keepalive use 1 off
+      - ipsec ike local address 1 {{ vlan1['gateway'] }}
+      - ipsec ike nat-traversal 1 on
+      - ipsec ike pre-shared-key 1 text {{ preshared_key }}
+      - ipsec ike remote address 1 any
+    parents:
+      - tunnel select 1
+      - ipsec tunnel 101
+    save_when: changed
+
+- name: Set the NAT descriptor
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - nat descriptor address outer 1 ipcp
+      - nat descriptor address inner 1 auto
+      - nat descriptor masquerade static 1 1 {{ vlan1['gateway'] }} esp
+      - nat descriptor masquerade static 1 2 {{ vlan1['gateway'] }} udp 500
+      - nat descriptor masquerade static 1 3 {{ vlan1['gateway'] }} udp 4500
+    save_when: changed
+
+- name: Add ipsec settings more
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - ipsec auto refresh on
+      - ipsec transport 1 101 udp 1701
+    save_when: changed
+
+- name: Start the l2tp service
+  yamaha_network.rtx.rtx_config:
+    lines: l2tp service on
+    save_when: changed

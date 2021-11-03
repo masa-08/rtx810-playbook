@@ -1,0 +1,10 @@
+---
+- name: Disable login from remote routers and turn off telnet and ssh clients and the "forget" function
+  yamaha_network.rtx.rtx_config:
+    lines: security class 2 off off off
+    save_when: changed
+
+- name: Stop the telnet service to disable telnet login
+  yamaha_network.rtx.rtx_config:
+    lines: telnetd service off
+    save_when: changed

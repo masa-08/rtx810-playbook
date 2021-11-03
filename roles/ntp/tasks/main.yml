@@ -1,0 +1,15 @@
+---
+- name: Output the schedule setting for NTP synchronization
+  yamaha_network.rtx.rtx_command:
+    commands: show config | grep schedule | grep ntpdate
+  register: output
+
+- name: Extract the line containing strings "schedule at ... ntpdate"
+  set_fact:
+    result: "{{ output.stdout_lines[0] | select('regex', 'ntpdate') | length }}"
+
+- name: Configure to synchronize time with NICT's NTP server every day
+  yamaha_network.rtx.rtx_config:
+    lines: schedule at 1 */* 0:0 * ntpdate ntp.nict.jp
+    save_when: changed
+  when: result == "0"

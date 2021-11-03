@@ -1,0 +1,17 @@
+---
+- name: Configure the DHCP server to comply with RFC 2131 and to ignore DHCP requests from clients without lease information
+  yamaha_network.rtx.rtx_config:
+    lines: dhcp server rfc2131 compliant except remain-silent
+    save_when: changed
+
+- name: Set the DHCP scope
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - dhcp scope 1 {{ vlan1['dhcp']['from'] }}-{{ vlan1['dhcp']['to'] }}/{{ vlan1['length'] }} gateway {{ vlan1['gateway'] }}
+      - dhcp scope 2 {{ vlan2['dhcp']['from'] }}-{{ vlan2['dhcp']['to'] }}/{{ vlan2['length'] }} gateway {{ vlan2['gateway'] }}
+    save_when: changed
+
+- name: Start the DHCP server service
+  yamaha_network.rtx.rtx_config:
+    lines: dhcp service server
+    save_when: changed

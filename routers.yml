@@ -1,0 +1,10 @@
+---
+- hosts: routers
+  roles:
+    - basic
+    - dhcp
+    - security
+    - vlan
+    - pppoe
+    - ntp
+    - vpn

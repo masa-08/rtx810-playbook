@@ -1,0 +1,4 @@
+---
+ansible_connection: network_cli
+ansible_network_os: yamaha_network.rtx.rtx
+ansible_become: true

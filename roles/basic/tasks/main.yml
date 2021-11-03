@@ -1,0 +1,8 @@
+---
+- name: Set the console character encoding to ASCII
+  yamaha_network.rtx.rtx_command:
+    commands: console character ascii
+
+- name: Set console prompt
+  yamaha_network.rtx.rtx_command:
+    commands: console prompt {{ hostname }}

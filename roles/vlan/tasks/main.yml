@@ -1,0 +1,22 @@
+---
+- name: Enable the LAN divide function
+  yamaha_network.rtx.rtx_config:
+    lines: lan type lan1 port-based-option=divide-network
+    save_when: changed
+
+- name: Map physical ports to VLANs
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - vlan port mapping lan1.1 vlan1
+      - vlan port mapping lan1.2 vlan2
+      - vlan port mapping lan1.3 vlan3
+      - vlan port mapping lan1.4 vlan3
+    save_when: changed
+
+- name: Configure the IP address of each VLAN interface
+  yamaha_network.rtx.rtx_config:
+    lines:
+      - ip vlan1 address {{ vlan1['gateway'] }}/{{ vlan1['length'] }}
+      - ip vlan2 address {{ vlan2['gateway'] }}/{{ vlan2['length'] }}
+      - ip vlan3 address {{ vlan3['gateway'] }}/{{ vlan3['length'] }}
+    save_when: changed
